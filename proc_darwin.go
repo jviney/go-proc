@@ -2,9 +2,12 @@
 
 package proc
 
-// Based on // https://github.com/cloudfoundry/gosigar/blob/master/sigar_darwin.go
+// Based on https://github.com/cloudfoundry/gosigar/blob/master/sigar_darwin.go
 
-// #include <sys/sysctl.h>
+/*
+#include <sys/sysctl.h>
+typedef struct kinfo_proc kInfoProc;
+*/
 import "C"
 
 import (
@@ -16,25 +19,60 @@ import (
   "unsafe"
 )
 
-func GetProcess(pid int) (*Process, error) {
-  process := Process{Pid: pid}
+func ps(pid int) []*Process {
+  processes := []*Process{}
 
-  err := kern_procargs(process.Pid,
-    func(command string) {
-      parts := strings.Split(command, "/")
-      process.Command = parts[len(parts) - 1]
-    },
-    func(argv string) {
-      process.CommandLine = process.Command + " " + argv
-    },
-    nil,
-  )
+  mib := []C.int{C.CTL_KERN, C.KERN_PROC, C.KERN_PROC_ALL, 0}
+  length := uintptr(0)
 
-  if err != nil {
-    return nil, err
-  } else {
-    return &process, nil
+  if err := sysctl(mib, nil, &length, nil, 0); err != nil {
+    return nil
   }
+
+  buf := make([]byte, length)
+  if err := sysctl(mib, &buf[0], &length, nil, 0); err != nil {
+    return nil
+  }
+
+  kInfoProcSize := int(unsafe.Sizeof(C.kInfoProc{}))
+  count := int(length) / kInfoProcSize
+
+  for i := 0; i < count; i++ {
+    proc := (*C.kInfoProc) (unsafe.Pointer(&buf[i * kInfoProcSize]))
+    procPid := int(proc.kp_proc.p_pid)
+
+    if pid >= 0 && procPid != pid {
+      continue
+    }
+
+    process := Process{Pid: procPid}
+
+    err := kern_procargs(process.Pid,
+      func(command string) {
+        parts := strings.Split(command, "/")
+        process.Command = parts[len(parts) - 1]
+      },
+      func(argv string) {
+        process.CommandLine = process.Command + " " + strings.TrimSpace(argv)
+      },
+    )
+
+    if err != nil {
+      continue
+    }
+
+    if process.CommandLine == "" {
+      process.CommandLine = process.Command
+    }
+
+    processes = append(processes, &process)
+
+    if process.Pid == pid {
+      break
+    }
+  }
+
+  return processes
 }
 
 // wrapper around sysctl KERN_PROCARGS2
@@ -42,8 +80,7 @@ func GetProcess(pid int) (*Process, error) {
 // up to the caller as to which pieces of data they want
 func kern_procargs(pid int,
   exe func(string),
-  argv func(string),
-  env func(string, string)) error {
+  argv func(string)) error {
 
   mib := []C.int{C.CTL_KERN, C.KERN_PROCARGS2, C.int(pid)}
   argmax := uintptr(C.ARG_MAX)
@@ -83,35 +120,24 @@ func kern_procargs(pid int,
     }
   }
 
-  if env == nil {
-    return nil
-  }
-
-  delim := []byte{61} // "="
-
-  for {
-    line, err := bbuf.ReadBytes(0)
-    if err == io.EOF || line[0] == 0 {
-      break
-    }
-    pair := bytes.SplitN(chop(line), delim, 2)
-    env(string(pair[0]), string(pair[1]))
-  }
-
   return nil
 }
 
-func sysctl(mib []C.int, old *byte, oldlen *uintptr,
-  new *byte, newlen uintptr) (err error) {
-  var p0 unsafe.Pointer
-  p0 = unsafe.Pointer(&mib[0])
-  _, _, e1 := syscall.Syscall6(syscall.SYS___SYSCTL, uintptr(p0),
+
+func sysctl(mib []C.int, old *byte, oldlen *uintptr, new *byte, newlen uintptr) (err error) {
+  _, _, e1 := syscall.Syscall6(
+    syscall.SYS___SYSCTL,
+    uintptr(unsafe.Pointer(&mib[0])),
     uintptr(len(mib)),
-    uintptr(unsafe.Pointer(old)), uintptr(unsafe.Pointer(oldlen)),
-    uintptr(unsafe.Pointer(new)), uintptr(newlen))
+    uintptr(unsafe.Pointer(old)),
+    uintptr(unsafe.Pointer(oldlen)),
+    uintptr(unsafe.Pointer(new)),
+    uintptr(newlen))
+
   if e1 != 0 {
     err = e1
   }
+
   return
 }
 

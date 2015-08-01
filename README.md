@@ -4,15 +4,26 @@
 
 Go process inspector exposes process data on Linux and Mac OS with a common API.
 
+Inspired by [sys-proctable](http://github.com/djberg96/sys-proctable).
+
 ## Example
 
 ```
   cmd := exec.Command("sleep", "5")
   cmd.Start()
 
-  if process, err := proc.GetProcess(cmd.Process.Pid); err != nil {
+  if process := proc.GetProcess(cmd.Process.Pid); process != nil {
+    process.Pid # <pid>
     process.Command # "sleep"
     process.ComandLine # "sleep 5"
+  }
+```
+
+```
+  for _, p := range proc.GetAllProcesses() {
+    p.Pid
+    p.Command
+    p.CommandLine
   }
 ```
 
