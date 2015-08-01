@@ -29,7 +29,7 @@ Inspired by [sys-proctable](http://github.com/djberg96/sys-proctable).
 
 ## Supported platforms
 
-Modern flavors of darwin and linux.
+Modern flavours of darwin and linux.
 
 ## License
 
