@@ -1,10 +1,5 @@
 package proc
 
-import(
-  "os"
-  "syscall"
-)
-
 type Process struct {
   Pid int
   Command string
@@ -22,15 +17,4 @@ func GetProcess(pid int) *Process {
 
 func GetAllProcesses() []*Process {
   return ps(-1)
-}
-
-func (p *Process) Active() bool {
-  process, err := os.FindProcess(p.Pid)
-
-  if err != nil {
-    return false
-  }
-
-  err = process.Signal(syscall.Signal(0))
-  return err == nil
 }

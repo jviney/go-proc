@@ -42,25 +42,6 @@ func TestProcessFields(t *testing.T) {
   cmd.Wait()
 }
 
-func TestActive(t *testing.T) {
-  cmd := exec.Command("sleep", "1")
-  cmd.Start()
-
-  if process := GetProcess(cmd.Process.Pid); process == nil {
-    t.Fatalf("failed to find process")
-  } else {
-    if ! process.Active() {
-      t.Errorf("process not active")
-    }
-
-    cmd.Wait()
-
-    if process.Active() {
-      t.Errorf("process active")
-    }
-  }
-}
-
 func TestGetProcessGoRoutines(t *testing.T) {
   cmd := exec.Command("sleep", "5")
   cmd.Start()
