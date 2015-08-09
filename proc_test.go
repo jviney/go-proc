@@ -42,6 +42,25 @@ func TestProcessFields(t *testing.T) {
   cmd.Wait()
 }
 
+func TestLongCommandLine(t *testing.T) {
+  cmd := exec.Command("echo", "1", "2", "3")
+  cmd.Start()
+
+  if process := GetProcess(cmd.Process.Pid); process == nil {
+    t.Errorf("failed to find process")
+  } else {
+    if process.Command != "echo" {
+      t.Fatal()
+    }
+
+    if process.CommandLine != "echo 1 2 3" {
+      t.Errorf("expected %s got %s", "echo 1 2 3", process.CommandLine)
+    }
+  }
+
+  cmd.Wait()
+}
+
 func TestGetProcessGoRoutines(t *testing.T) {
   cmd := exec.Command("sleep", "5")
   cmd.Start()

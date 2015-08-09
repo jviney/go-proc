@@ -47,23 +47,15 @@ func ps(pid int) []*Process {
 
     process := Process{Pid: procPid}
 
-    err := kern_procargs(process.Pid,
-      func(command string) {
-        parts := strings.Split(command, "/")
-        process.Command = parts[len(parts) - 1]
-      },
-      func(argv string) {
-        process.CommandLine = process.Command + " " + strings.TrimSpace(argv)
-      },
-    )
+    command, argv, err := kern_procargs(process.Pid)
 
     if err != nil {
       continue
     }
 
-    if process.CommandLine == "" {
-      process.CommandLine = process.Command
-    }
+    commandParts := strings.Split(command, "/")
+    process.Command = strings.TrimSpace(commandParts[len(commandParts) - 1])
+    process.CommandLine += strings.Join(argv, " ")
 
     processes = append(processes, &process)
 
@@ -75,19 +67,14 @@ func ps(pid int) []*Process {
   return processes
 }
 
-// wrapper around sysctl KERN_PROCARGS2
-// callbacks params are optional,
-// up to the caller as to which pieces of data they want
-func kern_procargs(pid int,
-  exe func(string),
-  argv func(string)) error {
-
+func kern_procargs(pid int) (command string, argv []string, err error) {
   mib := []C.int{C.CTL_KERN, C.KERN_PROCARGS2, C.int(pid)}
   argmax := uintptr(C.ARG_MAX)
   buf := make([]byte, argmax)
-  err := sysctl(mib, &buf[0], &argmax, nil, 0)
+  err = sysctl(mib, &buf[0], &argmax, nil, 0)
+
   if err != nil {
-    return nil
+    return
   }
 
   bbuf := bytes.NewBuffer(buf)
@@ -97,9 +84,7 @@ func kern_procargs(pid int,
   binary.Read(bbuf, binary.LittleEndian, &argc)
 
   path, err := bbuf.ReadBytes(0)
-  if exe != nil {
-    exe(string(chop(path)))
-  }
+  command = string(chop(path))
 
   // skip trailing \0's
   for {
@@ -110,17 +95,17 @@ func kern_procargs(pid int,
     }
   }
 
+  argv = make([]string, argc)
+
   for i := 0; i < int(argc); i++ {
     arg, err := bbuf.ReadBytes(0)
     if err == io.EOF {
       break
     }
-    if argv != nil {
-      argv(string(chop(arg)))
-    }
+    argv[i] = string(chop(arg))
   }
 
-  return nil
+  return
 }
 
 
