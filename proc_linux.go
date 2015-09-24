@@ -9,8 +9,8 @@ import (
   "strconv"
 )
 
-func ps(pid int) []*Process {
-  processes := []*Process{}
+func ps(pid int) []*ProcessInfo {
+  processes := []*ProcessInfo{}
   files, _ := ioutil.ReadDir("/proc")
 
   for _, file := range files {
@@ -26,7 +26,7 @@ func ps(pid int) []*Process {
       continue
     }
 
-    process := Process{Pid: procPid}
+    process := ProcessInfo{Pid: procPid}
 
     if commandLine, err := ioutil.ReadFile("/proc/" + file.Name() + "/cmdline"); err != nil {
       continue // Process terminated

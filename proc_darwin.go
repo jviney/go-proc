@@ -19,8 +19,8 @@ import (
   "unsafe"
 )
 
-func ps(pid int) []*Process {
-  processes := []*Process{}
+func ps(pid int) []*ProcessInfo {
+  processes := []*ProcessInfo{}
 
   mib := []C.int{C.CTL_KERN, C.KERN_PROC, C.KERN_PROC_ALL, 0}
   length := uintptr(0)
@@ -45,7 +45,7 @@ func ps(pid int) []*Process {
       continue
     }
 
-    process := Process{Pid: procPid}
+    process := ProcessInfo{Pid: procPid}
 
     command, argv, err := kern_procargs(process.Pid)
 

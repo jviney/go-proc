@@ -7,17 +7,17 @@ import(
 )
 
 func TestGetProcessNegativePid(t *testing.T) {
-  if GetProcess(-1) != nil {
+  if GetProcessInfo(-1) != nil {
     t.Errorf("expected nil")
   }
 }
 
 func TestGetProcessZero(t *testing.T) {
-  GetProcess(0)
+  GetProcessInfo(0)
 }
 
 func TestGetProcessMissingPid(t *testing.T) {
-  if GetProcess(99999999) != nil {
+  if GetProcessInfo(99999999) != nil {
     t.Errorf("expected nil")
   }
 }
@@ -26,7 +26,7 @@ func TestProcessFields(t *testing.T) {
   cmd := exec.Command("sleep", "5")
   cmd.Start()
 
-  if process := GetProcess(cmd.Process.Pid); process == nil {
+  if process := GetProcessInfo(cmd.Process.Pid); process == nil {
     t.Errorf("failed to find process")
   } else {
     if process.Command != "sleep" {
@@ -46,11 +46,11 @@ func TestLongCommandLine(t *testing.T) {
   cmd := exec.Command("echo", "1", "2", "3")
   cmd.Start()
 
-  if process := GetProcess(cmd.Process.Pid); process == nil {
+  if process := GetProcessInfo(cmd.Process.Pid); process == nil {
     t.Errorf("failed to find process")
   } else {
     if process.Command != "echo" {
-      t.Fatal()
+      t.Fatal("expected echo")
     }
 
     if process.CommandLine != "echo 1 2 3" {
@@ -72,7 +72,7 @@ func TestGetProcessGoRoutines(t *testing.T) {
 
   for i := 0; i < count; i++ {
     go func() {
-      if GetProcess(cmd.Process.Pid) == nil {
+      if GetProcessInfo(cmd.Process.Pid) == nil {
         t.Errorf("failed to get process from goroutine")
       }
       wg.Done()
@@ -83,7 +83,7 @@ func TestGetProcessGoRoutines(t *testing.T) {
 }
 
 func TestGetAllProcesses(t *testing.T) {
-  processes := GetAllProcesses()
+  processes := GetAllProcessesInfo()
 
   if len(processes) < 10 {
     t.Errorf("expected at least 10 processes")
