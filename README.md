@@ -12,10 +12,10 @@ Inspired by [sys-proctable](http://github.com/djberg96/sys-proctable).
   cmd := exec.Command("sleep", "5")
   cmd.Start()
 
-  if process := proc.GetProcess(cmd.Process.Pid); process != nil {
+  if process := proc.GetProcessInfo(cmd.Process.Pid); process != nil {
     process.Pid # <pid>
     process.Command # "sleep"
-    process.ComandLine # "sleep 5"
+    process.CommandLine # "sleep 5"
   }
 ```
 
