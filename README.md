@@ -2,7 +2,7 @@
 
 ## Overview
 
-Go process inspector exposes process data on Linux and Mac OS with a common API.
+Go process inspector exposes process data on Linux and macOS with a common API.
 
 Inspired by [sys-proctable](http://github.com/djberg96/sys-proctable).
 
