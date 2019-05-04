@@ -55,7 +55,7 @@ func ps(pid int) []*ProcessInfo {
 
     commandParts := strings.Split(command, "/")
     process.Command = strings.TrimSpace(commandParts[len(commandParts) - 1])
-    process.CommandLine += strings.Join(argv, " ")
+    process.CommandLine = argv
 
     processes = append(processes, &process)
 

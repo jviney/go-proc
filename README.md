@@ -15,7 +15,7 @@ Inspired by [sys-proctable](http://github.com/djberg96/sys-proctable).
   if process := proc.GetProcess(cmd.Process.Pid); process != nil {
     process.Pid # <pid>
     process.Command # "sleep"
-    process.ComandLine # "sleep 5"
+    process.ComandLine # []string{"sleep", "5"}
   }
 ```
 

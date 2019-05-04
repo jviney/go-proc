@@ -1,91 +1,74 @@
 package proc
 
-import(
-  "os/exec"
-  "sync"
-  "testing"
+import (
+	"os/exec"
+	"sync"
+	"testing"
+
+	"github.com/stretchr/testify/assert"
 )
 
 func TestGetProcessNegativePid(t *testing.T) {
-  if GetProcessInfo(-1) != nil {
-    t.Errorf("expected nil")
-  }
+	assert.Nil(t, GetProcessInfo(-1))
 }
 
 func TestGetProcessZero(t *testing.T) {
-  GetProcessInfo(0)
+	assert.Nil(t, GetProcessInfo(0))
 }
 
 func TestGetProcessMissingPid(t *testing.T) {
-  if GetProcessInfo(99999999) != nil {
-    t.Errorf("expected nil")
-  }
+	assert.Nil(t, GetProcessInfo(99999999))
 }
 
 func TestProcessFields(t *testing.T) {
-  cmd := exec.Command("sleep", "5")
-  cmd.Start()
+	cmd := exec.Command("sleep", "5")
+	cmd.Start()
 
-  if process := GetProcessInfo(cmd.Process.Pid); process == nil {
-    t.Errorf("failed to find process")
-  } else {
-    if process.Command != "sleep" {
-      t.Errorf("expected %s got %s", "sleep", process.Command)
-    }
+	process := GetProcessInfo(cmd.Process.Pid)
+	assert.NotNil(t, process)
 
-    if process.CommandLine != "sleep 5" {
-      t.Errorf("expected '%s' got '%s'", "sleep 5", process.CommandLine)
-    }
-  }
+	assert.Equal(t, "sleep", process.Command)
+	assert.Equal(t, []string{"sleep", "5"}, process.CommandLine)
 
-  cmd.Process.Kill()
-  cmd.Wait()
+	cmd.Process.Kill()
+	cmd.Wait()
 }
 
 func TestLongCommandLine(t *testing.T) {
-  cmd := exec.Command("echo", "1", "2", "3")
-  cmd.Start()
+	cmd := exec.Command("dd", "if=/dev/zero", "of=/dev/null")
+	cmd.Start()
 
-  if process := GetProcessInfo(cmd.Process.Pid); process == nil {
-    t.Errorf("failed to find process")
-  } else {
-    if process.Command != "echo" {
-      t.Fatal("expected echo")
-    }
+	process := GetProcessInfo(cmd.Process.Pid)
+	assert.NotNil(t, process)
 
-    if process.CommandLine != "echo 1 2 3" {
-      t.Errorf("expected %s got %s", "echo 1 2 3", process.CommandLine)
-    }
-  }
+	assert.Equal(t, "dd", process.Command)
+	assert.Equal(t, []string{"dd", "if=/dev/zero", "of=/dev/null"}, process.CommandLine)
 
-  cmd.Wait()
+	cmd.Process.Kill()
+	cmd.Wait()
 }
 
 func TestGetProcessGoRoutines(t *testing.T) {
-  cmd := exec.Command("sleep", "5")
-  cmd.Start()
+	cmd := exec.Command("sleep", "5")
+	cmd.Start()
 
-  count := 100
+	count := 100
 
-  var wg sync.WaitGroup
-  wg.Add(count)
+	var wg sync.WaitGroup
+	wg.Add(count)
 
-  for i := 0; i < count; i++ {
-    go func() {
-      if GetProcessInfo(cmd.Process.Pid) == nil {
-        t.Errorf("failed to get process from goroutine")
-      }
-      wg.Done()
-    }()
-  }
+	for i := 0; i < count; i++ {
+		go func() {
+			assert.NotNil(t, GetProcessInfo(cmd.Process.Pid))
+			wg.Done()
+		}()
+	}
 
-  wg.Wait()
+	wg.Wait()
 }
 
 func TestGetAllProcesses(t *testing.T) {
-  processes := GetAllProcessesInfo()
+	processes := GetAllProcessesInfo()
 
-  if len(processes) < 10 {
-    t.Errorf("expected at least 10 processes")
-  }
+	assert.Greater(t, len(processes), 10)
 }
